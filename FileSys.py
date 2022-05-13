@@ -2,7 +2,6 @@ import datetime
 
 root = None
 current_dir = None
-pending_dir = None
 
 class Node:
     # Class generalized to "Node" to allow for additions such as files which arent directories
