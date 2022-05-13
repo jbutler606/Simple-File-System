@@ -2,6 +2,7 @@ import datetime
 
 root = None
 current_dir = None
+pending_dir = None
 
 class Node:
     # Class generalized to "Node" to allow for additions such as files which arent directories
@@ -40,61 +41,79 @@ class Directory(Node):
         self.identifier = "Directory"
 
     def add_to_directory(self, item):
-        self.dir_contents.append(item)
+        # I chose to include the identifier as it allows for a file & directory of the same name to be present.
+        self.dir_contents.append((item, item.identifier))
 
 def search(target_dir, dir):
     global current_dir
 
     # Base case if the target directory is the current directory that we're in
     if dir.name == target_dir:
-        dir.access_timestamp = datetime.datetime.now()
         current_dir = dir
         return True
-
-    for dir_child in dir.dir_contents:
-        if isinstance(dir_child, Directory):
-            if dir_child.name == target_dir:
-                dir_child.access_timestamp = datetime.datetime.now()
-                current_dir = dir_child
+    
+    # Check contents of directory for the requested directory
+    for dir_obj in dir.dir_contents:
+        # Unpack the tuple
+        obj = dir_obj[0]
+        if isinstance(obj, Directory):
+            if obj.name == target_dir:
+                current_dir = obj
                 return True
-            elif dir_child.name != target_dir:
-                if search(target_dir, dir_child):
-                    return True
+    # Deprecating the below code as it was used to recursively search for a directory.
+    # For the purposes of "cd" this is not necessary. It may be necessary in the future
+    # as part of a function to search possible files/directories as part of a query
+    #        elif dir_child.name != target_dir:
+    #            if search(target_dir, dir_child):
+    #                return True
 
+    # We did not find the requested directory.
     return False
 
 def function_ls():
-    # Lists the current children directories of the directory that the user is currently in
-    print(*current_dir.dir_contents, sep = "\n")
+    # Lists the current objects located within the directory that the user is currently in
+    for dir_obj in current_dir.dir_contents:
+        # Printing the 1st part of the tuple which is the actual object itself
+        print(dir_obj[0])
 
 def function_cd(target_dir, dir):
     global current_dir
 
     if target_dir == "..":
         current_dir = current_dir.parent_dir
-        return
+        return True
 
     if target_dir == "~":
         current_dir = root
-        return
+        return True
     
     if not search(target_dir, dir):
         print("Cannot find directory", target_dir,"because it does not exist.")
+        return False
+    else:
+        return True
 
 
 def function_mkdir(name):
+    # Creates new directory within the current directory
     global current_dir
 
     new_dir = Directory(name, current_dir)
-    if new_dir not in current_dir.dir_contents:
+    if (new_dir, "Directory") not in current_dir.dir_contents:
+        # Checks if there is already a directory with the same name
         current_dir.add_to_directory(new_dir)
-    return True
+    else:
+        print("Directory not created as a directory with the same name already exists in the current directory.")
+    
 
 def function_touch(file_name):
-    # Used to create file(s) within a directory
+    # Used to create a file within the current directory
     new_file = File(file_name)
-    if new_file not in current_dir.dir_contents:
+    if (new_file, "File") not in current_dir.dir_contents:
+        # Checks if there is already a file with the same name
         current_dir.add_to_directory(new_file)
+    else:
+        print("File not created as a file with the same name already exists in the current directory.")
 
 def main():
     # Create root directory as the current and only directory within the filesystem on program start.
@@ -103,19 +122,40 @@ def main():
     
     root = Directory("root")
     current_dir = root
-    quit = False
-    while(not quit):
+    while(True):
         cmd = input().split(" ")
         function = cmd[0]
         if function == "ls":
             function_ls()
         elif function == "mkdir":
-            function_mkdir(cmd[1])
+            if len(cmd) > 1:
+                function_mkdir(cmd[1])
+            else:
+                print("No parameter was given. Function was not run.")
         elif function == "cd":
-            visited = set()
-            function_cd(cmd[1], root)
+            if len(cmd) > 1:
+                path_list = cmd[1].split(sep = "/")
+                if len(path_list) >= 1:
+                    if path_list[0] == '':
+                        # This means that the first part of the path following the command cd was '/' indicating an absolute path starting at the root.
+                        path_list[0] = "~"
+                pending_dir = current_dir
+                cmd_success = True
+                for path in path_list:
+                    cmd_success = function_cd(path, current_dir)
+                if cmd_success:
+                    current_dir.access_timestamp = datetime.datetime.now()
+                else:
+                    current_dir = pending_dir
+            else:
+                print("No parameter was given. Function was not run.")
         elif function == "touch":
-            function_touch(cmd[1])
+            if len(cmd) > 1:
+                function_touch(cmd[1])
+            else:
+                print("No parameter was given. Function was not run.")
+        elif function == "exit":
+            break
         else:
             print("Unknown command provided. Please try another command.")
 
