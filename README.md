@@ -1,6 +1,8 @@
 This file system is extremely basic and each function currently only performs the most default form of the function as seen in a typical linux shell. There are a lot of improvements and optimizations that can be made.
 For the purposes of this exercise, the current functionality seems appropriate.
 
+NOTE: The README file on github seems to be forcing items on separate lines to be bunched together. The raw/source output shows the information I am trying to convey much cleaner. My apologies for this.
+
 ls    - Currently only lists out the files/directories within the current directory that's being accessed.
 touch - Currently only creates a new file within the current directory that's being accessed.
         This will only succeed if there is not already a file with that name (caps insensitive) present in the current directory.
